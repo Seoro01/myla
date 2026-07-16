@@ -1,0 +1,42 @@
+name: Trading Bot Backtest (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: "Market to test, e.g. KRW-BTC"
+        default: "KRW-BTC"
+        required: false
+      k:
+        description: "Breakout K factor"
+        default: "0.5"
+        required: false
+      stop_loss_pct:
+        description: "Stop loss fraction, e.g. 0.10 for -10%"
+        default: "0.10"
+        required: false
+      backtest_days:
+        description: "Number of past days to replay"
+        default: "200"
+        required: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    env:
+      TICKER: ${{ github.event.inputs.ticker }}
+      K: ${{ github.event.inputs.k }}
+      STOP_LOSS_PCT: ${{ github.event.inputs.stop_loss_pct }}
+      BACKTEST_DAYS: ${{ github.event.inputs.backtest_days }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r trading_bot/requirements.txt
+
+      - name: Run backtest
+        run: python trading_bot/backtest.py

@@ -1,0 +1,49 @@
+name: Upbit Trading Bot
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trading-bot
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    env:
+      TICKER: "KRW-BTC"
+      BUDGET_KRW: "100000"
+      K: "0.5"
+      STOP_LOSS_PCT: "0.10"
+      # Flip to "false" only after you've confirmed a few dry-run cycles look correct
+      # in the Actions logs AND you've added UPBIT_ACCESS_KEY / UPBIT_SECRET_KEY secrets.
+      DRY_RUN: "true"
+      UPBIT_ACCESS_KEY: ${{ secrets.UPBIT_ACCESS_KEY }}
+      UPBIT_SECRET_KEY: ${{ secrets.UPBIT_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r trading_bot/requirements.txt
+
+      - name: Run bot
+        run: python trading_bot/bot.py
+
+      - name: Commit trade log
+        run: |
+          if [ -n "$(git status --porcelain trading_bot/trades.csv)" ]; then
+            git config user.name "trading-bot"
+            git config user.email "actions@github.com"
+            git add trading_bot/trades.csv
+            git commit -m "bot: log trade $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
